@@ -26,10 +26,28 @@ return {
 	fyf_font_size_description = {
 		en = "Fly you Fools font size."
 	},
+	hide_ui = {
+		en = "Hide UI"
+	},
+	hide_ui_description = {
+		en = "Hide the User Interface."
+	},
+	hide_arms = {
+		en = "Hide model"
+	},
+	hide_arms_description = {
+		en = "Hide arms and weapon of your character."
+	},
+	show_ui_widget = {
+		en = "Flight information"
+	},
+	show_ui_widget_description = {
+		en = "Display flight information on screen."
+	},
 	show_speed_multiplier = {
-		en = "Flight speed"
+		en = "Max. flight speed indicator"
 	},
 	show_speed_multiplier_description = {
-		en = "Display flight speed."
+		en = "Display maximum flight speed."
 	}
 }

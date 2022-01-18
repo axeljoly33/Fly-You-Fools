@@ -21,27 +21,46 @@ return {
 				function_name   = "toggle_flight_mode"
 			},
 			{
-				setting_id = "show_speed_multiplier",
-				type = "checkbox",
-				default_value = true,
+				setting_id    = "hide_ui",
+				type          = "checkbox",
+				default_value = false,
+				sub_widgets   = {
+					{
+						setting_id      = "hide_arms",
+						type            = "checkbox",
+						default_value   = false,
+					}
+				}
 			},
 			{
-				setting_id      = "offset_x",
-				type            = "numeric",
-				default_value   = 0,
-				range           = {-960, 960}
-			},
-			{
-				setting_id      = "offset_y",
-				type            = "numeric",
-				default_value   = 0,
-				range           = {-540, 540}
-			},
-			{
-				setting_id = "fyf_font_size",
-				type = "numeric",
-				default_value = 32,
-				range = {8, 128},
+				setting_id    = "show_ui_widget",
+				type          = "checkbox",
+				default_value = false,
+				sub_widgets   = {
+					{
+						setting_id      = "show_speed_multiplier",
+						type            = "checkbox",
+						default_value   = false,
+					},
+					{
+						setting_id      = "offset_x",
+						type            = "numeric",
+						default_value   = 0,
+						range           = {-3840, 3840}
+					},
+					{
+						setting_id      = "offset_y",
+						type            = "numeric",
+						default_value   = 0,
+						range           = {-2160, 2160}
+					},
+					{
+						setting_id    = "fyf_font_size",
+						type          = "numeric",
+						default_value = 32,
+						range         = {0, 128},
+					}
+				}
 			}
 		}
 	}

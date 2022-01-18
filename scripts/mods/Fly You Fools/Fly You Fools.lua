@@ -52,14 +52,13 @@ local mod = get_mod("Fly You Fools")
 ---------------
 
 -- General settings mod variables
-local fyf_activation_status = false
 local compteur = true -- Debug variable
-local fyf_echo_string = "[Fly You Fools] "
-local SCREEN_WIDTH = 1920
-local SCREEN_HEIGHT = 1080
-local always_on = true
+local first_time_launched = false
+local ui_hidden_fyf = false
+local no_arms_fyf = false
+local SCREEN_WIDTH = 3840
+local SCREEN_HEIGHT = 2160
 local speed = 0.0
-local test_cpt = 0
 
 -- VT2 source variables
 local Camera = Camera
@@ -81,6 +80,7 @@ local InputManager = InputManager
 local CharacterStateHelper = CharacterStateHelper
 local PlayerUnitHealthExtension = PlayerUnitHealthExtension
 local table = table
+local PlayerUnitFirstPerson = PlayerUnitFirstPerson
 Managers.free_flight = Managers.free_flight or FreeFlightManager:new()
 
 -- Backup movement variables
@@ -137,8 +137,8 @@ local scenegraph_definition = {
 	root = {
 	  	scale = "fit",
 	  	size = {
-			1920,
-			1080
+			SCREEN_WIDTH,
+			SCREEN_HEIGHT
 	  	},
 	  	position = {
 			0,
@@ -159,7 +159,8 @@ local fyf_ui_definition = {
 				retained_mode = false,
 				fade_out_duration = 5,
 				content_check_function = function(content)
-					if not compteur then
+					--if not compteur then
+					if mod:get("show_ui_widget") then
 						return true
 					end
 					return false
@@ -171,7 +172,7 @@ local fyf_ui_definition = {
 				text_id = "fyf_speed_text",
 				retained_mode = false,
 				content_check_function = function(content)
-					if mod:get("show_speed_multiplier") then
+					if mod:get("show_ui_widget") and mod:get("show_speed_multiplier") then
 						return true
 					end
 					return false
@@ -279,10 +280,9 @@ mod.toggle_flight_mode = function(self, compteur)
 	local free_flight_manager = Managers.free_flight
 	if free_flight_manager then
 		if not free_flight_manager.data or not free_flight_manager:active(1) then
-			fyf_activation_status = true
+			first_time_launched = true
 			mod:enable_freeflight(free_flight_manager)
 		else
-			fyf_activation_status = false
 			mod:disable_freeflight(free_flight_manager, compteur)
 			local health_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "health_system")
 			local status_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "status_system")
@@ -384,33 +384,51 @@ mod.enable_freeflight = function (self, free_flight_manager, compteur)
 			end
 		end
 
-		--
-		-----------
-		-- two_handed_cog_hammers_template_1	units/weapons/player/wpn_empire_short_sword/wpn_empire_short_sword
-		-- beer_barrel							units/weapons/player/wpn_explosive_barrel/wpn_explosive_barrel_01
-		-- magic_barrel							units/weapons/player/pup_magic_barrel/wpn_magic_barrel_01
-		-- explosive_barrel						units/weapons/player/wpn_explosive_barrel/wpn_explosive_barrel_01
-		-- explosive_barrel_objective			units/weapons/player/wpn_explosive_barrel/wpn_gun_powder_barrel_01
-		-- lamp_oil								units/weapons/player/wpn_oil_jug_01/wpn_oil_jug_01
-
-		-- getmetatable())
-		-----------
-		-- test
-		local Weapons = Weapons
-		-- for key,value in pairs(Weapons.two_handed_cog_hammers_template_1) do
-		-- 	print(key, value)
-		-- end
-
-		Weapons.explosive_barrel.actions.action_one.default.alert_sound_range_hit = 1 -- = 10
-		Weapons.explosive_barrel.actions.action_two.default.alert_sound_range_hit = 1
-		Weapons.explosive_barrel.actions.action_dropped.default.alert_sound_range_hit = 1
-
-		-- weapon_template_barrel.actions.action_one.default.alert_sound_range_hit
-		--
-
-		test_cpt = 1
-
 		free_flight_manager.register_input_manager(free_flight_manager, input_manager)
+
+		-- No HUD clean up
+		local free_flight_manager = Managers.free_flight
+		local game_mode_manager = Managers.state.game_mode
+		local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
+		local mutator_handler = game_mode_manager._mutator_handler
+		local mutator_name = "realism"
+	
+		if mod:get("hide_ui") then
+			if has_realism and ui_hidden_fyf then
+				mutator_handler:deactivate_mutator(mutator_name)
+				ui_hidden_fyf = false
+			end
+			if free_flight_manager and not has_realism and first_time_launched and not ui_hidden_fyf then
+				mutator_handler:initialize_mutators({
+					mutator_name
+				})
+				mutator_handler:activate_mutator(mutator_name)
+				ui_hidden_fyf = true
+			end
+		end
+	
+		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
+			mutator_handler:deactivate_mutator(mutator_name)
+			ui_hidden_fyf = false
+		end
+
+		-- No 1st Person Model clean up
+		local player_unit = Managers.player:local_player().player_unit
+		local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
+
+		if mod:get("hide_arms") and mod:get("hide_ui") then
+			if free_flight_manager and first_time_launched and not no_arms_fyf then
+				first_person_extension:hide_weapons("third_person_mode", true)
+				Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
+				no_arms_fyf = true
+			end
+		end
+
+		if not mod:get("hide_arms") and no_arms_fyf then
+			first_person_extension:set_first_person_mode(true)
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
+			no_arms_fyf = false
+		end
 
 		-- Enable free flight
 		self.first_person_mode = true
@@ -459,6 +477,39 @@ mod.disable_freeflight = function (self, free_flight_manager, compteur)
 		local input_manager = Managers.input
 		if input_manager.stored_keymaps_data["FreeFlightKeymaps"] then
 			input_manager.stored_keymaps_data["FreeFlightKeymaps"] = mod.FreeFlightKeymaps
+		end
+
+		-- No HUD clean up
+		local free_flight_manager = Managers.free_flight
+		local game_mode_manager = Managers.state.game_mode
+		local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
+		local mutator_handler = game_mode_manager._mutator_handler
+		local mutator_name = "realism"
+
+		if mod:get("hide_ui") and has_realism and ui_hidden_fyf then
+			mutator_handler:deactivate_mutator(mutator_name)
+			ui_hidden_fyf = false
+		end
+
+		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
+			mutator_handler:deactivate_mutator(mutator_name)
+			ui_hidden_fyf = false
+		end
+
+		-- No 1st Person Model clean up
+		local player_unit = Managers.player:local_player().player_unit
+		local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
+
+		if mod:get("hide_arms") and no_arms_fyf then
+			first_person_extension:set_first_person_mode(true)
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
+			no_arms_fyf = false
+		end
+
+		if not mod:get("hide_arms") and no_arms_fyf then
+			first_person_extension:set_first_person_mode(true)
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
+			no_arms_fyf = false
 		end
 	end
 
@@ -536,6 +587,52 @@ mod:hook_origin(PlayerUnitFirstPerson, "update", function (self, unit, input, dt
 		self.toggle_visibility_timer = nil
 		self:set_first_person_mode(false)
 		self:set_first_person_mode(true)
+	end
+
+	-- HUD --
+	---------
+	-- Hide HUD
+	local free_flight_manager = Managers.free_flight
+	local game_mode_manager = Managers.state.game_mode
+	local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
+	local mutator_handler = game_mode_manager._mutator_handler
+	local mutator_name = "realism"
+
+	if mod:get("hide_ui") then
+		if free_flight_manager and not has_realism and first_time_launched and not ui_hidden_fyf then
+			mutator_handler:initialize_mutators({
+				mutator_name
+			})
+			mutator_handler:activate_mutator(mutator_name)
+			ui_hidden_fyf = true
+		end
+	end
+	
+	-- Unhide HUD
+	if not mod:get("hide_ui") and has_realism and first_time_launched and ui_hidden_fyf then
+		mutator_handler:deactivate_mutator(mutator_name)
+		ui_hidden_fyf = false
+	end
+
+	-- 1st Person Model --
+	----------------------
+	-- Hide 1st Person Model
+	local player_unit = Managers.player:local_player().player_unit
+	local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
+
+	if mod:get("hide_arms") and mod:get("hide_ui") then
+		if free_flight_manager and first_time_launched and not no_arms_fyf then
+			first_person_extension:hide_weapons("third_person_mode", true)
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
+			no_arms_fyf = true
+		end
+	end
+
+	-- Unhide 1st Person Model
+	if not mod:get("hide_arms") and first_time_launched and no_arms_fyf then
+		first_person_extension:set_first_person_mode(true)
+		Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
+		no_arms_fyf = false
 	end
 
 	-- Update the first person model from third person model and some variables linked to it
@@ -889,3 +986,50 @@ mod.on_game_state_changed = function(status, state)
 		end
 	end
 end
+
+
+		-- print(game_mode_manager.is_server)
+		-- print(game_mode_manager._mutator_handler)
+		-- print("##########################################")
+		-- print("##########################################")
+		-- for key,value in pairs(getmetatable(game_mode_manager._mutator_handler)) do
+		-- 	print(key, value)
+		-- end
+		-- for key,value in pairs(game_mode_manager._mutator_handler) do
+		-- 	print(key, value)
+		-- end
+		-- print("##########################################")
+		-- print(game_mode_manager._mutator_handler._mutator_context)
+		-- print(game_mode_manager._mutator_handler._active_mutators)
+		-- print(game_mode_manager._mutator_handler._mutators)
+		-- print("##########################################")
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutator_context) do
+		-- 	print(key, value)
+		-- end
+		-- print("##########################################")
+		-- for key,value in pairs(game_mode_manager._mutator_handler._active_mutators) do
+		-- 	print(key, value)
+		-- end
+		-- print("##########################################")
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators) do
+		-- 	print(key, value)
+		-- end
+		-- print(game_mode_manager._mutator_handler._mutators["realism"])
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]) do
+		-- 	print(key, value)
+		-- end
+		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"])
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]) do
+		-- 	print(key, value)
+		-- end
+		-- print("##########################################")
+		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"]["server"])
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]["server"]) do
+		-- 	print(key, value)
+		-- end
+		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"]["client"])
+		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]["client"]) do
+		-- 	print(key, value)
+		-- end
+		-- print("##########################################")
+		-- print("##########################################")
