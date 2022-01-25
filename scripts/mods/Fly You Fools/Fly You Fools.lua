@@ -53,9 +53,13 @@ local mod = get_mod("Fly You Fools")
 
 -- General settings mod variables
 local compteur = true -- Debug variable
+-- local compteur_diff_speed = false
 local first_time_launched = false
 local ui_hidden_fyf = false
 local no_arms_fyf = false
+local fp_tp_arms = false
+local no_weapon_fyf = false
+local fp_tp_weapon = false
 local SCREEN_WIDTH = 3840
 local SCREEN_HEIGHT = 2160
 local speed = 0.0
@@ -394,40 +398,33 @@ mod.enable_freeflight = function (self, free_flight_manager, compteur)
 		local mutator_name = "realism"
 	
 		if mod:get("hide_ui") then
-			if has_realism and ui_hidden_fyf then
-				mutator_handler:deactivate_mutator(mutator_name)
-				ui_hidden_fyf = false
-			end
-			if free_flight_manager and not has_realism and first_time_launched and not ui_hidden_fyf then
-				mutator_handler:initialize_mutators({
-					mutator_name
-				})
-				mutator_handler:activate_mutator(mutator_name)
-				ui_hidden_fyf = true
-			end
+			ui_hidden_fyf = true
 		end
-	
 		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			mutator_handler:deactivate_mutator(mutator_name)
 			ui_hidden_fyf = false
 		end
 
-		-- No 1st Person Model clean up
 		local player_unit = Managers.player:local_player().player_unit
 		local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
 
-		if mod:get("hide_arms") and mod:get("hide_ui") then
-			if free_flight_manager and first_time_launched and not no_arms_fyf then
-				first_person_extension:hide_weapons("third_person_mode", true)
-				Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
-				no_arms_fyf = true
-			end
+		-- No Arms Model clean up
+		if mod:get("hide_arms") and free_flight_manager and first_time_launched and not no_arms_fyf then
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
+			no_arms_fyf = true
 		end
-
 		if not mod:get("hide_arms") and no_arms_fyf then
-			first_person_extension:set_first_person_mode(true)
 			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
 			no_arms_fyf = false
+		end
+
+		-- No Weapon Model clean up
+		if mod:get("hide_weapon") and free_flight_manager and first_time_launched and not no_weapon_fyf then
+			first_person_extension:hide_weapons("third_person_mode", true)
+			no_weapon_fyf = true
+		end
+		if not mod:get("hide_weapon") and no_weapon_fyf then
+			first_person_extension:set_first_person_mode(true)
+			no_weapon_fyf = false
 		end
 
 		-- Enable free flight
@@ -487,29 +484,37 @@ mod.disable_freeflight = function (self, free_flight_manager, compteur)
 		local mutator_name = "realism"
 
 		if mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			mutator_handler:deactivate_mutator(mutator_name)
 			ui_hidden_fyf = false
 		end
-
 		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			mutator_handler:deactivate_mutator(mutator_name)
 			ui_hidden_fyf = false
 		end
 
-		-- No 1st Person Model clean up
 		local player_unit = Managers.player:local_player().player_unit
 		local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
 
+		-- No Arms Model clean up
 		if mod:get("hide_arms") and no_arms_fyf then
-			first_person_extension:set_first_person_mode(true)
 			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
 			no_arms_fyf = false
+			fp_tp_arms = false
+		end
+		if not mod:get("hide_arms") and no_arms_fyf then
+			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
+			no_arms_fyf = false
+			fp_tp_arms = false
 		end
 
-		if not mod:get("hide_arms") and no_arms_fyf then
+		-- No Weapon Model clean up
+		if mod:get("hide_weapon") and no_weapon_fyf then
 			first_person_extension:set_first_person_mode(true)
-			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
-			no_arms_fyf = false
+			no_weapon_fyf = false
+			fp_tp_weapon = false
+		end
+		if not mod:get("hide_weapon") and no_weapon_fyf then
+			first_person_extension:set_first_person_mode(true)
+			no_weapon_fyf = false
+			fp_tp_weapon = false
 		end
 	end
 
@@ -520,6 +525,7 @@ mod.disable_freeflight = function (self, free_flight_manager, compteur)
 	local player_unit = Managers.player:local_player().player_unit
 	local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
 	first_person_extension.MAX_MIN_PITCH = (math.pi / 2 - (math.pi / 15))
+	-- compteur_diff_speed = false
 
 	mod:disable_all_hooks()
 end
@@ -559,6 +565,16 @@ mod:hook_origin(PlayerUnitFirstPerson, "calculate_look_rotation", function (self
 end)
 
 mod:hook_origin(PlayerUnitFirstPerson, "update", function (self, unit, input, dt, context, t)
+
+	if not self.first_person_mode then
+		if mod:get("hide_arms") then
+			fp_tp_arms = true
+		end
+		if mod:get("hide_weapon") then
+			fp_tp_weapon = true
+		end
+	end
+
 	if Managers.input:is_device_active("gamepad") then
 		self:update_aim_assist_multiplier(dt)
 	end
@@ -591,48 +607,54 @@ mod:hook_origin(PlayerUnitFirstPerson, "update", function (self, unit, input, dt
 
 	-- HUD --
 	---------
-	-- Hide HUD
 	local free_flight_manager = Managers.free_flight
 	local game_mode_manager = Managers.state.game_mode
 	local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
 	local mutator_handler = game_mode_manager._mutator_handler
 	local mutator_name = "realism"
 
+	-- Hide HUD
 	if mod:get("hide_ui") then
-		if free_flight_manager and not has_realism and first_time_launched and not ui_hidden_fyf then
-			mutator_handler:initialize_mutators({
-				mutator_name
-			})
-			mutator_handler:activate_mutator(mutator_name)
-			ui_hidden_fyf = true
-		end
+		ui_hidden_fyf = true
 	end
-	
 	-- Unhide HUD
 	if not mod:get("hide_ui") and has_realism and first_time_launched and ui_hidden_fyf then
-		mutator_handler:deactivate_mutator(mutator_name)
 		ui_hidden_fyf = false
 	end
 
 	-- 1st Person Model --
 	----------------------
-	-- Hide 1st Person Model
 	local player_unit = Managers.player:local_player().player_unit
 	local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
 
-	if mod:get("hide_arms") and mod:get("hide_ui") then
-		if free_flight_manager and first_time_launched and not no_arms_fyf then
-			first_person_extension:hide_weapons("third_person_mode", true)
-			Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
-			no_arms_fyf = true
-		end
+	-- Hide Arms Model
+	if mod:get("hide_arms") and free_flight_manager and first_time_launched and not no_arms_fyf then
+		Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
+		no_arms_fyf = true
 	end
-
-	-- Unhide 1st Person Model
+	if fp_tp_arms and mod:get("hide_arms") and free_flight_manager and first_time_launched and no_arms_fyf then
+		Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, false)
+		no_arms_fyf = true
+	end
+	-- Unhide Arms Model
 	if not mod:get("hide_arms") and first_time_launched and no_arms_fyf then
-		first_person_extension:set_first_person_mode(true)
 		Unit.set_unit_visibility(first_person_extension.first_person_attachment_unit, true)
 		no_arms_fyf = false
+	end
+
+	-- Hide Weapon Model
+	if mod:get("hide_weapon") and free_flight_manager and first_time_launched and not no_weapon_fyf then
+		first_person_extension:hide_weapons("third_person_mode", true)
+		no_weapon_fyf = true
+	end
+	if fp_tp_weapon and mod:get("hide_weapon") and free_flight_manager and first_time_launched and no_weapon_fyf then
+		first_person_extension:hide_weapons("third_person_mode", true)
+		no_weapon_fyf = true
+	end
+	-- Unhide Weapon Model
+	if not mod:get("hide_weapon") and first_time_launched and no_weapon_fyf then
+		first_person_extension:set_first_person_mode(true)
+		no_weapon_fyf = false
 	end
 
 	-- Update the first person model from third person model and some variables linked to it
@@ -768,15 +790,35 @@ mod:hook_origin(FreeFlightManager, "_update_free_flight", function (self, dt, pl
 	local cam = data.frustum_freeze_camera or ScriptViewport.camera(viewport)
 	local input = self.input_manager:get_service("FreeFlight")
 
-	-- Modify the player flight speed with mouse scroll. Max speed = 100.0, min speed = 1.0
+	-- Modify the player flight speed with mouse scroll.
 	local translation_change_speed = data.current_translation_max_speed * 0.5
 	local speed_change = Vector3.y(input:get("speed_change") or Vector3(0, 0, 0))
-	data.current_translation_max_speed = math.max(data.current_translation_max_speed + speed_change * 5, 0.01)
-	if data.current_translation_max_speed > 100.0 then
-		data.current_translation_max_speed = 100.0
-	elseif data.current_translation_max_speed < 5.0 then
-		data.current_translation_max_speed = 5.0
+
+	if mod:get("max_speed") < mod:get("min_speed") then -- and not compteur_diff_speed then
+		mod:set("max_speed", 100.0)
+		mod:set("min_speed", 5.0)
+		mod:echo("Min and max speeds adjusted to " .. tostring(mod:get("min_speed")) .. " and " .. tostring(mod:get("max_speed")))
 	end
+	if mod:get("step_speed") > (mod:get("max_speed") - mod:get("min_speed")) then
+		if ((mod:get("max_speed") - mod:get("min_speed")) < 50.0) and ((mod:get("max_speed") - mod:get("min_speed")) >= 25.0) then
+			mod:set("step_speed", 25.0)
+		elseif ((mod:get("max_speed") - mod:get("min_speed")) < 25.0) and ((mod:get("max_speed") - mod:get("min_speed")) >= 10.0) then
+			mod:set("step_speed", 10.0)
+		elseif ((mod:get("max_speed") - mod:get("min_speed")) < 10.0) and ((mod:get("max_speed") - mod:get("min_speed")) >= 5.0) then
+			mod:set("step_speed", 5.0)
+		else
+			mod:set("step_speed", 1.0)
+		end
+		mod:echo("Step speed adjusted to " .. tostring(mod:get("step_speed")))
+	end
+
+	data.current_translation_max_speed = math.max(data.current_translation_max_speed + speed_change * mod:get("step_speed"), 0.01)
+	if data.current_translation_max_speed > mod:get("max_speed") then
+		data.current_translation_max_speed = mod:get("max_speed")
+	elseif data.current_translation_max_speed < mod:get("min_speed") then
+		data.current_translation_max_speed = mod:get("min_speed")
+	end
+
 	speed = data.current_translation_max_speed
 
 	local cm = Camera.local_pose(cam)

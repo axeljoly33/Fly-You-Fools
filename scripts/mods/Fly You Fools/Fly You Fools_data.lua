@@ -21,12 +21,52 @@ return {
 				function_name   = "toggle_flight_mode"
 			},
 			{
-				setting_id    = "hide_ui",
-				type          = "checkbox",
-				default_value = false,
-				sub_widgets   = {
+				setting_id  = "speed_group",
+				type        = "group",
+				sub_widgets = {
+					{
+						setting_id      = "min_speed",
+						type            = "numeric",
+						default_value   = 5,
+						range           = {0, 200}
+					},
+					{
+						setting_id      = "max_speed",
+						type            = "numeric",
+						default_value   = 100,
+						range           = {0, 200}
+					},
+					{
+						setting_id    = "step_speed",
+						type          = "dropdown",
+						default_value = 5,
+						options = {
+						  {text = "step_speed_1", value = 1},
+						  {text = "step_speed_2", value = 2},
+						  {text = "step_speed_5", value = 5},
+						  {text = "step_speed_10", value = 10},
+						  {text = "step_speed_25", value = 25},
+						  {text = "step_speed_50", value = 50}
+						}
+					  }
+				}
+			},
+			{
+				setting_id  = "hide_group",
+				type        = "group",
+				sub_widgets = {
+					{
+						setting_id    = "hide_ui",
+						type          = "checkbox",
+						default_value = false,
+					},
 					{
 						setting_id      = "hide_arms",
+						type            = "checkbox",
+						default_value   = false,
+					},
+					{
+						setting_id      = "hide_weapon",
 						type            = "checkbox",
 						default_value   = false,
 					}
