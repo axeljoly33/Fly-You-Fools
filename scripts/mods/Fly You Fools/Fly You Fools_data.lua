@@ -1,6 +1,5 @@
 local mod = get_mod("Fly You Fools")
 
---[[ _data.lua ]]
 return {
 	name 			 = "Fly You Fools",
 	description 	 = "First person flight mod.",
@@ -48,7 +47,7 @@ return {
 						  {text = "step_speed_25", value = 25},
 						  {text = "step_speed_50", value = 50}
 						}
-					  }
+					}
 				}
 			},
 			{
@@ -58,17 +57,75 @@ return {
 					{
 						setting_id    = "hide_ui",
 						type          = "checkbox",
-						default_value = false,
+						default_value = false
 					},
 					{
 						setting_id      = "hide_arms",
 						type            = "checkbox",
-						default_value   = false,
+						default_value   = false
 					},
 					{
 						setting_id      = "hide_weapon",
 						type            = "checkbox",
-						default_value   = false,
+						default_value   = false
+					}
+				}
+			},
+			-- {
+			-- 	setting_id  = "walls_group",
+			-- 	type        = "group",
+			-- 	sub_widgets = {
+			-- 		{
+			-- 			setting_id      = "fyf_show_walls",
+			-- 			type            = "keybind",
+			-- 			default_value   = { },
+			-- 			keybind_global  = true,
+			-- 			keybind_trigger = "pressed",
+			-- 			keybind_type    = "function_call",
+			-- 			function_name   = "draw_invisible_walls"
+			-- 		},
+			-- 		{
+			-- 			setting_id  = "walls_color_group",
+			-- 			type        = "group",
+			-- 			sub_widgets = {
+			-- 				{
+			-- 					setting_id      = "fyf_walls_color_alpha",
+			-- 					type            = "numeric",
+			-- 					default_value   = 255,
+			-- 					range           = {0, 255}
+			-- 				},
+			-- 				{
+			-- 					setting_id      = "fyf_walls_color_red",
+			-- 					type            = "numeric",
+			-- 					default_value   = 255,
+			-- 					range           = {0, 255}
+			-- 				},
+			-- 				{
+			-- 					setting_id      = "fyf_walls_color_green",
+			-- 					type            = "numeric",
+			-- 					default_value   = 0,
+			-- 					range           = {0, 255}
+			-- 				},
+			-- 				{
+			-- 					setting_id      = "fyf_walls_color_blue",
+			-- 					type            = "numeric",
+			-- 					default_value   = 0,
+			-- 					range           = {0, 255}
+			-- 				}
+			-- 			}
+			-- 		}
+			-- 	}
+			-- },
+			{
+				setting_id    = "fyf_custom_fov",
+				type          = "checkbox",
+				default_value = false,
+				sub_widgets   = {
+					{
+						setting_id      = "fyf_custom_fov_row",
+						type            = "numeric",
+						default_value   = 105,
+						range           = {10, 160}
 					}
 				}
 			},
@@ -80,7 +137,7 @@ return {
 					{
 						setting_id      = "show_speed_multiplier",
 						type            = "checkbox",
-						default_value   = false,
+						default_value   = false
 					},
 					{
 						setting_id      = "offset_x",
@@ -98,7 +155,7 @@ return {
 						setting_id    = "fyf_font_size",
 						type          = "numeric",
 						default_value = 32,
-						range         = {0, 128},
+						range         = {0, 128}
 					}
 				}
 			}

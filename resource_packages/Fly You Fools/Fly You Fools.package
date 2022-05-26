@@ -9,3 +9,7 @@ package = [
 lua = [
 	"scripts/mods/Fly You Fools/*"
 ]
+
+wwise_dep = [
+  "wwise/*"
+]

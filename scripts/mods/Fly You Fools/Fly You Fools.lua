@@ -46,16 +46,21 @@
 ---------------
 
 local mod = get_mod("Fly You Fools")
+Wwise.load_bank("wwise/FYF_soundbank")
 
 ---------------
 -- VARIABLES --
 ---------------
 
 -- General settings mod variables
+local mod_ON = false
 local compteur = true -- Debug variable
+local cmpt_network_one = false
+local cmpt_network_two = false
 -- local compteur_diff_speed = false
 local first_time_launched = false
 local ui_hidden_fyf = false
+local hide_ui_one_time_called = false
 local no_arms_fyf = false
 local fp_tp_arms = false
 local no_weapon_fyf = false
@@ -63,6 +68,21 @@ local fp_tp_weapon = false
 local SCREEN_WIDTH = 3840
 local SCREEN_HEIGHT = 2160
 local speed = 0.0
+local compteur_ledge1 = false
+local compteur_ledge2 = false
+local compteur_knocked1 = false
+local compteur_knocked2 = false
+local compteur_pounced1 = false
+local compteur_pounced2 = false
+local compteur_hookrat1 = false
+local compteur_hookrat2 = false
+local compteur_cspawn1 = false
+local compteur_cspawn2 = false
+local compteur_corruptor1 = false
+local compteur_corruptor2 = false
+local compteur_dead1 = false
+local compteur_dead2 = false
+local not_player_unit = false
 
 -- VT2 source variables
 local Camera = Camera
@@ -85,6 +105,7 @@ local CharacterStateHelper = CharacterStateHelper
 local PlayerUnitHealthExtension = PlayerUnitHealthExtension
 local table = table
 local PlayerUnitFirstPerson = PlayerUnitFirstPerson
+local UnitFrameUI = UnitFrameUI
 Managers.free_flight = Managers.free_flight or FreeFlightManager:new()
 
 -- Backup movement variables
@@ -95,12 +116,113 @@ mod.backup_MIN_FALL_DAMAGE_HEIGHT = mod.backup_MIN_FALL_DAMAGE_HEIGHT or PlayerU
 mod.backup_HARD_LANDING_FALL_HEIGHT = mod.backup_HARD_LANDING_FALL_HEIGHT or PlayerUnitMovementSettings.fall.heights.HARD_LANDING_FALL_HEIGHT or 7
 mod.first_run_fov_changed = false
 
--- Command call
+-- Commands call
 mod:command("fyf", " First-person flight mode", function() mod:toggle_flight_mode(compteur) end)
+
+mod:command("FYF_playBank", "", function()
+	local world = Managers.world:world("level_world")
+	local wwise_world = Wwise.wwise_world(world)
+	local sound = WwiseWorld.trigger_event(wwise_world, "FYF_event")
+	mod:echo(sound)
+end)
 
 ---------------
 -- FUNCTIONS --
 ---------------
+
+-- INVISIBLE/DEATH WALLS --
+---------------------------
+
+-- local RESPAWN_DISTANCE = 70
+-- local END_OF_LEVEL_BUFFER = 35
+-- local RESPAWN_TIME = 30
+-- local SAVED_WHERE = nil
+-- local TEXT = false
+-- local ITEM_TEXT = false
+-- local SPAWNER_DATA = {}
+-- local SPAWNER_DISPLAY_DATA = {}
+-- local GUARENTEED_DATA = {}
+-- local enabled = false
+
+-- Development._hardcoded_dev_params.disable_debug_draw = not enabled
+-- script_data.disable_debug_draw = not enabled
+
+-- DebugManager.drawer = function (self, options)
+-- 	options = options or {}
+-- 	local drawer_name = options.name
+-- 	local drawer = nil
+-- 	local drawer_api = DebugDrawer
+
+-- 	if drawer_name == nil then
+-- 		local line_object = World.create_line_object(self._world)
+-- 		drawer = drawer_api.new(drawer_api, line_object, options.mode)
+-- 		self._drawers[#self._drawers + 1] = drawer
+-- 	elseif self._drawers[drawer_name] == nil then
+-- 		local line_object = World.create_line_object(self._world)
+-- 		drawer = drawer_api.new(drawer_api, line_object, options.mode)
+-- 		self._drawers[drawer_name] = drawer
+-- 	else
+-- 		drawer = self._drawers[drawer_name]
+-- 	end
+
+-- 	return drawer
+-- end
+
+-- -- DebugManager.drawer = function (self, options)
+-- -- 	options = options or {}
+-- -- 	local drawer_name = options.name
+-- -- 	local drawer = nil
+-- -- 	local drawer_api = (BUILD == "release" and DebugDrawerRelease) or DebugDrawer
+
+-- -- 	if drawer_name == nil then
+-- -- 		local line_object = World.create_line_object(self._world)
+-- -- 		drawer = drawer_api:new(line_object, options.mode)
+-- -- 		self._drawers[#self._drawers + 1] = drawer
+-- -- 	elseif self._drawers[drawer_name] == nil then
+-- -- 		local line_object = World.create_line_object(self._world)
+-- -- 		drawer = drawer_api:new(line_object, options.mode)
+-- -- 		self._drawers[drawer_name] = drawer
+-- -- 	else
+-- -- 		drawer = self._drawers[drawer_name]
+-- -- 	end
+
+-- -- 	return drawer
+-- -- end
+
+-- mod.draw_invisible_walls = function ()
+-- 	if mod_ON then
+-- 		local local_player = Managers.player.local_player(Managers.player)
+-- 		local viewport_name = local_player.viewport_name
+-- 		local camera_position = Managers.state.camera:camera_position(viewport_name)
+-- 		local camera_rotation = Managers.state.camera:camera_rotation(viewport_name)
+-- 		local camera_direction = Quaternion.forward(camera_rotation)
+-- 		local world = Managers.world:world("level_world")
+-- 		local physics_world = World.get_data(world, "physics_world")
+-- 		local range = 30
+	
+-- 		local position = camera_position
+-- 		local rotation = camera_rotation
+-- 		local direction = Quaternion.forward(rotation)
+-- 		local left_right = Quaternion.right(rotation)
+-- 		local up_down = Quaternion.up(rotation)
+-- 		local position_left_right, position_up_down
+-- 		local is_hit, hit_pos, hit_dist, hit_norm, hit_actor
+-- 		local color = Color(mod:get("fyf_walls_color_alpha"), mod:get("fyf_walls_color_red"), mod:get("fyf_walls_color_green"), mod:get("fyf_walls_color_blue"))
+	
+-- 		for i=-2,2,1 do
+-- 			for j=-2,2,1 do
+-- 				position_left_right = Vector3(position["x"] + j*left_right["x"] + i*up_down["x"], position["y"] + j*left_right["y"] + i*up_down["y"], position["z"] + j*left_right["z"] + i*up_down["z"])
+		
+-- 				is_hit, hit_pos, hit_dist, hit_norm, hit_actor = PhysicsWorld.immediate_raycast(physics_world, position_left_right, direction, range, "closest", "collision_filter", "filter_player_mover")
+-- 				if is_hit then
+-- 					QuickDrawerStay:circle(hit_pos, 0.1, hit_norm, color)
+-- 					QuickDrawerStay:vector(hit_pos, hit_norm*0.1, color)
+-- 				end
+-- 			end
+-- 		end
+-- 	end
+-- 	return
+-- end
 
 -----------------------------
 -- ACTIVE MOD UI FUNCTIONS --
@@ -228,6 +350,7 @@ function mod:on_disabled()
 end
 
 function mod:on_setting_changed()
+	-- FYF flight info
 	if not mod.ui_widget then
 	  	return
 	end
@@ -264,6 +387,18 @@ mod:hook_safe(IngameHud, "update", function(self)
 	  	mod.init()
 	end
 
+	-- -- Invisible/death walls
+	-- if Managers.state.game_mode._level_key == "inn_level" then
+	-- 	enabled = false
+	-- 	Development._hardcoded_dev_params.disable_debug_draw = not enabled
+	-- 	script_data.disable_debug_draw = not enabled
+	-- else
+	-- 	enabled = true
+	-- 	Development._hardcoded_dev_params.disable_debug_draw = not enabled
+	-- 	script_data.disable_debug_draw = not enabled
+	-- end
+
+	-- FYF flight info
 	local widget = mod.ui_widget
 	local ui_renderer = mod.ui_renderer
 	local ui_scenegraph = mod.ui_scenegraph
@@ -279,18 +414,239 @@ end)
 -- ACTIVE MOD UI FUNCTIONS --
 -----------------------------
 
+mod.update = function (t)
+	--HERE DEBUG
+	if Managers.state.network then
+		if Managers.state.network.game_mode._end_conditions_met and not cmpt_network_one then
+		 	--mod:echo("_end_conditions_met") --doesn't work
+			cmpt_network_one = true
+		end
+		if Managers.state.network.game_mode._round_started and not cmpt_network_two then
+		 	--mod:echo("_round_started")
+			cmpt_network_two = true
+		end
+		--mod:echo("_end_conditions_met=" ..tostring(Managers.state.network.game_mode._end_conditions_met))
+		--mod:echo("_round_started=" ..tostring(Managers.state.network.game_mode._round_started))
+	end
+	--HERE DEBUG
+
+
+	local game_mode_manager = Managers.state.game_mode
+	if game_mode_manager then
+		local l_player = Managers.player:local_player()
+
+		if l_player then
+			local p_unit = Managers.player:local_player().player_unit
+
+			if p_unit then
+				-- -- Invisible/death walls
+				-- if enabled then
+				-- 	if Managers.state.debug then
+				-- 		for _, drawer in pairs(Managers.state.debug._drawers) do
+				-- 			drawer.update(drawer, Managers.state.debug._world)
+				-- 		end
+				-- 	end
+				-- end
+				-- if not mod_ON then
+				-- 	QuickDrawer:reset()
+				-- 	QuickDrawerStay:reset()
+				-- 	local debug_text = Managers.state.debug_text
+				-- 	debug_text.clear_world_text(debug_text, "category: spawner_id")
+				-- 	debug_text.clear_world_text(debug_text, "category: item_spawner_id")
+				-- 	TEXT = false
+				-- 	ITEM_TEXT = false
+				-- end
+
+				-- 1st person fixes
+				local status_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "status_system")
+				local health_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "health_system")
+				local first_person_extension = ScriptUnit.extension(p_unit, "first_person_system")
+
+				-- if not_player_unit and Managers.state.network.profile_synchronizer._state:get_actually_ingame(Managers.state.network.profile_synchronizer._state._own_peer_id) and first_time_launched then
+				-- 	--first_person_extension:toggle_visibility(0.0)
+				-- 	first_person_extension.toggle_visibility_timer = nil
+				-- 	first_person_extension:set_first_person_mode(false)
+				-- 	first_person_extension:set_first_person_mode(true)
+				-- 	not_player_unit = false
+				-- end
+				
+				-- Ledge hanging fix
+				if status_extension.is_ledge_hanging and mod_ON then
+					compteur_ledge1 = true
+				end
+				if status_extension.is_ledge_hanging and not mod_ON and compteur_ledge1 then
+					compteur_ledge1 = false
+					compteur_ledge2 = true
+				end
+				if not status_extension.is_ledge_hanging and compteur_ledge2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					compteur_ledge2 = false
+				end
+
+				-- Knocked down fix
+				if (health_extension.state == "knocked_down") and mod_ON then
+					compteur_knocked1 = true
+				end
+				if (health_extension.state == "knocked_down") and not mod_ON and compteur_knocked1 then
+					compteur_knocked1 = false
+					compteur_knocked2 = true
+				end
+				if not (health_extension.state == "knocked_down") and compteur_knocked2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					first_person_extension:toggle_visibility(0.0)
+					compteur_knocked2 = false
+				end
+
+				-- Pounced down fix
+				if status_extension.pounced_down and mod_ON then
+					compteur_pounced1 = true
+				end
+				if status_extension.pounced_down and not mod_ON and compteur_pounced1 then
+					compteur_pounced1 = false
+					compteur_pounced2 = true
+				end
+				if not status_extension.pounced_down and compteur_pounced2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					first_person_extension:toggle_visibility(0.0)
+					compteur_pounced2 = false
+				end
+
+				-- Grabbed by packmaster fix
+				if CharacterStateHelper.is_grabbed_by_pack_master(status_extension) and mod_ON then
+					compteur_hookrat1 = true
+				end
+				if CharacterStateHelper.is_grabbed_by_pack_master(status_extension) and not mod_ON and compteur_hookrat1 then
+					compteur_hookrat1 = false
+					compteur_hookrat2 = true
+				end
+				if not CharacterStateHelper.is_grabbed_by_pack_master(status_extension) and compteur_hookrat2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					first_person_extension:toggle_visibility(0.0)
+					compteur_hookrat2 = false
+				end
+
+				-- Grabbed by chaos spawn fix
+				if status_extension.grabbed_by_chaos_spawn and mod_ON then
+					compteur_cspawn1 = true
+				end
+				if status_extension.grabbed_by_chaos_spawn and not mod_ON and compteur_cspawn1 then
+					compteur_cspawn1 = false
+					compteur_cspawn2 = true
+				end
+				if not status_extension.grabbed_by_chaos_spawn and compteur_cspawn2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					compteur_cspawn2 = false
+				end
+
+				-- Grabbed by leech fix
+				if status_extension.grabbed_by_corruptor and mod_ON then
+					compteur_corruptor1 = true
+				end
+				if status_extension.grabbed_by_corruptor and not mod_ON and compteur_corruptor1 then
+					compteur_corruptor1 = false
+					compteur_corruptor2 = true
+				end
+				if not status_extension.grabbed_by_corruptor and compteur_corruptor2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					compteur_corruptor2 = false
+				end
+
+				-- Dead fix
+				if status_extension.dead and mod_ON then
+					compteur_dead1 = true
+				end
+				if status_extension.dead and not mod_ON and compteur_dead1 then
+					compteur_dead1 = false
+					compteur_dead2 = true
+				end
+				if not status_extension.dead and compteur_dead2 then
+					first_person_extension.toggle_visibility_timer = nil
+					first_person_extension:set_first_person_mode(false)
+					first_person_extension:set_first_person_mode(true)
+					first_person_extension:toggle_visibility(0.0)
+					compteur_dead2 = false
+				end
+				-- if Managers.state.game_mode:game_mode().lost_condition_timer then
+				-- 	if Managers.state.network:network_time() >= Managers.state.game_mode:game_mode().lost_condition_timer then
+				-- 		if mod_ON then
+				-- 			mod:toggle_flight_mode(compteur)
+				-- 		end
+				-- 	end
+				-- end
+			-- else
+			-- 	not_player_unit = true
+			end
+		end	
+	end
+end
+
+mod.on_game_state_changed = function(status, state_name)
+	-- -- Invisible/death walls
+	-- enabled = false
+	-- SAVED_WHERE = nil
+	-- TEXT = false
+	-- ITEM_TEXT = false
+
+	--if mod:is_enabled() then
+	--end
+	-- if status == "enter" and state_name == "StateSplashScreen" then
+	-- 	mod:echo("StateSplashScreen")
+	-- elseif status == "enter" and state_name == "StateLoading" then
+	-- 	mod:echo("StateLoading")
+	-- elseif status == "enter" and state_name == "StateIngame" then
+	-- 	mod:echo("StateIngame")
+	-- elseif status == "enter" and state_name == "StateDemoEnd" then
+	-- 	mod:echo("StateDemoEnd")
+	-- elseif status == "enter" and state_name == "StateTitleScreen" then
+	-- 	mod:echo("StateTitleScreen")
+	-- elseif status == "enter" and state_name == "StateDedicatedServer" then
+	-- 	mod:echo("StateDedicatedServer")
+	-- end
+end
+
 -- Set up spawning the chosen unit
 mod.toggle_flight_mode = function(self, compteur)
 	local free_flight_manager = Managers.free_flight
 	if free_flight_manager then
-		if not free_flight_manager.data or not free_flight_manager:active(1) then
-			first_time_launched = true
-			mod:enable_freeflight(free_flight_manager)
+		if (not free_flight_manager.data or not free_flight_manager:active(1)) then
+			if Managers.player:local_player().player_unit then
+				if not mod_ON then
+					-- print(Managers.state.network)
+					-- for key,value in pairs(Managers.state.network.game_mode) do
+					-- 	print(key, value)
+					-- end
+					-- for key,value in pairs(getmetatable(Managers.state.network.game_mode)) do
+					-- 	print(key, value)
+					-- end
+					cmpt_network_one = false
+					cmpt_network_two = false
+
+
+					first_time_launched = true
+					mod_ON = true
+					print("[FYF] Fly You Fools - Flight Mod is on")
+					mod:enable_freeflight(free_flight_manager)
+				end
+			end
 		else
 			mod:disable_freeflight(free_flight_manager, compteur)
 			local health_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "health_system")
 			local status_extension = ScriptUnit.extension(Managers.player:local_player().player_unit, "status_system")
 			health_extension.is_invincible = false
+			mod_ON = false
+			print("[FYF] Fly You Fools - Flight Mod is off")
 		end
 	end
 end
@@ -393,15 +749,22 @@ mod.enable_freeflight = function (self, free_flight_manager, compteur)
 		-- No HUD clean up
 		local free_flight_manager = Managers.free_flight
 		local game_mode_manager = Managers.state.game_mode
+		local game_mode = Managers.state.game_mode:game_mode()
 		local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
 		local mutator_handler = game_mode_manager._mutator_handler
 		local mutator_name = "realism"
 	
-		if mod:get("hide_ui") then
-			ui_hidden_fyf = true
+		if mod:get("hide_ui") and first_time_launched then
+			if (not game_mode:photomode_enabled()) == true then
+				game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+				ui_hidden_fyf = true
+			end
 		end
-		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			ui_hidden_fyf = false
+		if not mod:get("hide_ui") and first_time_launched and ui_hidden_fyf then
+			if (not game_mode:photomode_enabled()) == false then
+				game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+				ui_hidden_fyf = false
+			end
 		end
 
 		local player_unit = Managers.player:local_player().player_unit
@@ -441,6 +804,7 @@ end
 mod.disable_freeflight = function (self, free_flight_manager, compteur)
 	-- Reset variables to normal values
 	local local_player = Managers.player:local_player()
+
 	if local_player then
 
 		-- Restore movement settings (should be reset upon map reset anyway)
@@ -479,15 +843,24 @@ mod.disable_freeflight = function (self, free_flight_manager, compteur)
 		-- No HUD clean up
 		local free_flight_manager = Managers.free_flight
 		local game_mode_manager = Managers.state.game_mode
+		local game_mode = Managers.state.game_mode:game_mode()
 		local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
 		local mutator_handler = game_mode_manager._mutator_handler
 		local mutator_name = "realism"
 
-		if mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			ui_hidden_fyf = false
+		if mod:get("hide_ui") and ui_hidden_fyf and first_time_launched then
+			if (not game_mode:photomode_enabled()) == false then
+				game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+				ui_hidden_fyf = false
+				hide_ui_one_time_called = true
+			end
 		end
-		if not mod:get("hide_ui") and has_realism and ui_hidden_fyf then
-			ui_hidden_fyf = false
+		if not mod:get("hide_ui") and ui_hidden_fyf and first_time_launched then
+			if (not game_mode:photomode_enabled()) == false then
+				game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+				ui_hidden_fyf = false
+				hide_ui_one_time_called = true
+			end
 		end
 
 		local player_unit = Managers.player:local_player().player_unit
@@ -609,17 +982,24 @@ mod:hook_origin(PlayerUnitFirstPerson, "update", function (self, unit, input, dt
 	---------
 	local free_flight_manager = Managers.free_flight
 	local game_mode_manager = Managers.state.game_mode
+	local game_mode = Managers.state.game_mode:game_mode()
 	local has_realism = game_mode_manager and game_mode_manager:has_activated_mutator("realism")
 	local mutator_handler = game_mode_manager._mutator_handler
 	local mutator_name = "realism"
 
 	-- Hide HUD
-	if mod:get("hide_ui") then
-		ui_hidden_fyf = true
+	if mod:get("hide_ui") and first_time_launched then
+		if (not game_mode:photomode_enabled()) == true then
+			game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+			ui_hidden_fyf = true
+		end
 	end
 	-- Unhide HUD
-	if not mod:get("hide_ui") and has_realism and first_time_launched and ui_hidden_fyf then
-		ui_hidden_fyf = false
+	if not mod:get("hide_ui") and first_time_launched and ui_hidden_fyf then
+		if (not game_mode:photomode_enabled()) == false then
+			game_mode:set_photomode_enabled(not game_mode:photomode_enabled())
+			ui_hidden_fyf = false
+		end
 	end
 
 	-- 1st Person Model --
@@ -714,7 +1094,13 @@ mod:hook_origin(FreeFlightManager, "_enter_free_flight", function (self, player,
 	local position = Matrix4x4.translation(tm)
 	local rotation = Matrix4x4.rotation(tm)
 
-	Camera.set_vertical_fov(cam, cam_fov)
+	if mod:get("fyf_custom_fov") then
+		-- mod:echo(cam_fov)
+		-- mod:echo(math.floor(((cam_fov / math.pi) * 180)+0.5))
+		Camera.set_vertical_fov(cam, ((mod:get("fyf_custom_fov_row") * math.pi ) / 180))
+	else
+		Camera.set_vertical_fov(cam, cam_fov)
+	end
 
 	if self._has_terrain then
 		data.terrain_decoration_observer = TerrainDecoration.create_observer(world, position)
@@ -784,11 +1170,13 @@ end)
 
 -- Update player position when updating free flight
 mod:hook_origin(FreeFlightManager, "_update_free_flight", function (self, dt, player, data, ...)
-	local world = Managers.world:world(data.viewport_world_name)							
+	local world = Managers.world:world(data.viewport_world_name)
 
 	local viewport = ScriptWorld.free_flight_viewport(world, data.viewport_name)
 	local cam = data.frustum_freeze_camera or ScriptViewport.camera(viewport)
 	local input = self.input_manager:get_service("FreeFlight")
+
+	Camera.set_far_range(cam, 50000)
 
 	-- Modify the player flight speed with mouse scroll.
 	local translation_change_speed = data.current_translation_max_speed * 0.5
@@ -862,17 +1250,6 @@ mod:hook_origin(FreeFlightManager, "_update_free_flight", function (self, dt, pl
 
 	ScatterSystem.move_observer(World.scatter_system(world), data.scatter_system_observer, trans, rot)
 
-	local player_unit = Managers.player:local_player().player_unit
-	local first_person_extension = ScriptUnit.extension(player_unit, "first_person_system")
-
-	local num_actors = Unit.num_actors(first_person_extension.unit)
-	for i = 1, num_actors, 1 do
-		local actor = Unit.actor(first_person_extension.unit, i)
-	  	if actor then
-	  		Actor.set_collision_enabled(actor, false)
-	   	end
-	end
-
 	-- Always change player position while flying
 	self.drop_player_at_camera_pos(self, cam, player)
 end)
@@ -886,30 +1263,33 @@ mod:hook_origin(FreeFlightManager, "drop_player_at_camera_pos", function (self, 
 	local offset = { x = 0, y = 0, z = -1.54 }
 
 	local player_unit = Managers.player:local_player().player_unit
-	local talent_extension = ScriptUnit.extension(player_unit, "talent_system")
-	local talent_extension = talent_extension
-	local current_hero_index = talent_extension._profile_index
-	local current_hero = SPProfiles[current_hero_index]
-	local hero_name = current_hero.display_name
-
-	if hero_name == "empire_soldier" then
-		-- Kruber
-		offset.z = -1.65
-	elseif hero_name == "dwarf_ranger" then
-		-- Dwarf
-		offset.z = -1.3
-	elseif hero_name == "wood_elf" then
-		-- Kerillian
-		offset.z = -1.5
-	elseif hero_name == "witch_hunter" then
-		-- Saltz
-		offset.z = -1.7
-	elseif hero_name == "bright_wizard" then
-		-- Sienna
-		offset.z = -1.55
-	else
-		-- Average
-		offset.z = -1.54
+	if player_unit then
+		local talent_extension = ScriptUnit.extension(player_unit, "talent_system")
+		if talent_extension then
+			local current_hero_index = talent_extension._profile_index
+			local current_hero = SPProfiles[current_hero_index]
+			local hero_name = current_hero.display_name
+		
+			if hero_name == "empire_soldier" then
+				-- Kruber
+				offset.z = -1.65
+			elseif hero_name == "dwarf_ranger" then
+				-- Dwarf
+				offset.z = -1.3
+			elseif hero_name == "wood_elf" then
+				-- Kerillian
+				offset.z = -1.5
+			elseif hero_name == "witch_hunter" then
+				-- Saltz
+				offset.z = -1.7
+			elseif hero_name == "bright_wizard" then
+				-- Sienna
+				offset.z = -1.55
+			else
+				-- Average
+				offset.z = -1.54
+			end
+		end
 	end
 
 	-- Apply offset to get final player position
@@ -929,6 +1309,23 @@ mod:hook_origin(FreeFlightManager, "drop_player_at_camera_pos", function (self, 
 		if mover then
 			Mover.set_position(mover, pos)
 		end
+	end
+end)
+
+-- Fix the player model not teleporting to the cam when going through walls/ground
+mod:hook_origin(PlayerUnitLocomotionExtension, "teleport_to", function (self, pos, rot, ...)
+	local unit = self.unit
+	local mover = Unit.mover(unit)
+
+	Mover.set_position(mover, pos)
+	Unit.set_local_position(unit, 0, pos)
+
+	if rot ~= nil then
+		self.first_person_extension:set_rotation(rot)
+	end
+
+	if not mod_ON then
+		self:move_to_non_intersecting_position()
 	end
 end)
 
@@ -961,11 +1358,12 @@ end)
 
 -- Prevent just the flying player from sticking to ledges
 mod:hook(CharacterStateHelper, "is_ledge_hanging", function (func, world, unit, ...)
-
 	local local_player = Managers.player:local_player()
 	local player_unit = local_player.player_unit
-	if unit == player_unit then
-		return false
+	if mod_ON then
+		if unit == player_unit then
+			return false
+		end
 	end
 
 	-- Original Function
@@ -977,19 +1375,18 @@ end)
 mod:hook(PlayerUnitHealthExtension, "add_damage", function (func, self, attacker_unit, damage_amount, hit_zone_name, damage_type, damage_direction, damage_source_name, ...)
 
 	-- Test for suicide damage source
-	if damage_source_name == "suicide" then
-
-		-- Test for existence of player
-		local local_player = Managers.player:local_player()
-		if local_player then
-
-			-- Prevent suicide in the local player unit
-			local extension_unit = self.unit
-			if extension_unit and extension_unit == local_player.player_unit then
-				damage_amount = 0
+	if mod_ON then
+		if damage_source_name == "suicide" then
+			-- Test for existence of player
+			local local_player = Managers.player:local_player()
+			if local_player then
+				-- Prevent suicide in the local player unit
+				local extension_unit = self.unit
+				if extension_unit and extension_unit == local_player.player_unit then
+					damage_amount = 0
+				end
 			end
 		end
-
 	end
 
 	-- Original Function
@@ -1002,12 +1399,14 @@ mod:hook(PlayerUnitHealthExtension, "die", function (func, self, damage_type, ..
 
 	-- Test for existence of player
 	local local_player = Managers.player:local_player()
-	if local_player then
 
-		-- Test that local player's unit is the unit of this health extension
-		local extension_unit = self.unit
-		if extension_unit and extension_unit == local_player.player_unit then
-			return
+	if mod_ON then
+		if local_player then
+			-- Test that local player's unit is the unit of this health extension
+			local extension_unit = self.unit
+			if extension_unit and extension_unit == local_player.player_unit then
+				return
+			end
 		end
 	end
 
@@ -1019,59 +1418,37 @@ end)
 -- CALLBACK --
 --------------
 
--- Call when game state changes (e.g. StateLoading -> StateIngame)
-mod.on_game_state_changed = function(status, state)
-	if state == "StateLoading" and status == "enter" then
-		local free_flight_manager = Managers.free_flight
-		if free_flight_manager and free_flight_manager.data and free_flight_manager:active(1) then	
-			mod:disable_freeflight(free_flight_manager)
-		end
-	end
-end
+-- mod:hook(GameModeManager, "complete_level", function (func, self, ...)
 
+-- 	-- Disable flight before moving to inn keep
+-- 	if mod_ON then
+-- 		mod:toggle_flight_mode(compteur)
+-- 	end
 
-		-- print(game_mode_manager.is_server)
-		-- print(game_mode_manager._mutator_handler)
-		-- print("##########################################")
-		-- print("##########################################")
-		-- for key,value in pairs(getmetatable(game_mode_manager._mutator_handler)) do
-		-- 	print(key, value)
-		-- end
-		-- for key,value in pairs(game_mode_manager._mutator_handler) do
-		-- 	print(key, value)
-		-- end
-		-- print("##########################################")
-		-- print(game_mode_manager._mutator_handler._mutator_context)
-		-- print(game_mode_manager._mutator_handler._active_mutators)
-		-- print(game_mode_manager._mutator_handler._mutators)
-		-- print("##########################################")
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutator_context) do
-		-- 	print(key, value)
-		-- end
-		-- print("##########################################")
-		-- for key,value in pairs(game_mode_manager._mutator_handler._active_mutators) do
-		-- 	print(key, value)
-		-- end
-		-- print("##########################################")
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators) do
-		-- 	print(key, value)
-		-- end
-		-- print(game_mode_manager._mutator_handler._mutators["realism"])
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]) do
-		-- 	print(key, value)
-		-- end
-		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"])
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]) do
-		-- 	print(key, value)
-		-- end
-		-- print("##########################################")
-		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"]["server"])
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]["server"]) do
-		-- 	print(key, value)
-		-- end
-		-- print(game_mode_manager._mutator_handler._mutators["realism"]["template"]["client"])
-		-- for key,value in pairs(game_mode_manager._mutator_handler._mutators["realism"]["template"]["client"]) do
-		-- 	print(key, value)
-		-- end
-		-- print("##########################################")
-		-- print("##########################################")
+-- 	print("Complete level triggered. Stacktrace: " .. Script.callstack())
+-- 	self._game_mode:complete_level(self._level_key)
+-- 	self._game_mode:trigger_end_level_area_events()
+-- end)
+
+-- mod:hook(GameModeManager, "fail_level", function (func, self, ...)
+	
+-- 	-- Disable flight before moving to inn keep
+-- 	if mod_ON then
+-- 		mod:toggle_flight_mode(compteur)
+-- 	end
+
+-- 	self._game_mode:fail_level()
+-- end)
+
+-- mod:hook(GameModeManager, "retry_level", function (func, self, ...)
+
+-- 	-- Disable flight before reloading the map
+-- 	if mod_ON then
+-- 		mod:toggle_flight_mode(compteur)
+-- 	end
+
+-- 	local level_seed = Managers.mechanism:generate_level_seed()
+
+-- 	Managers.level_transition_handler:reload_level(nil, level_seed)
+-- 	Managers.level_transition_handler:promote_next_level_data()
+-- end)

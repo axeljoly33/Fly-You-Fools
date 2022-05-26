@@ -1,0 +1,9 @@
+
+win32 = {
+	banks = [
+		"wwise/FYF_soundbank"
+	]
+	metadata = "wwise/project"
+	streams = [
+	]
+}

@@ -8,6 +8,18 @@ return {
 	activation_var_tooltip_id = {
 		en = "Allows you to toggle flight mode with a unique key."
 	},
+	fyf_custom_fov = {
+		en = "Custom FoV"
+	},
+	fyf_custom_fov_description = {
+		en = "Modify the in-flight user FoV."
+	},
+	fyf_custom_fov_row = {
+		en = "Custom FoV",
+	},
+	fyf_custom_fov_row_description = {
+		en = "Choose the value for your custom in-flight FoV.",
+	},
 	offset_x = {
 		en = "Offset X",
 	},
@@ -75,10 +87,10 @@ return {
 		en = "50"
 	},
 	hide_ui = {
-		en = "Hide UI (WIP)"
+		en = "Hide UI"
 	},
 	hide_ui_description = {
-		en = "Hide the User Interface. (WIP)"
+		en = "Hide the User Interface."
 	},
 	hide_arms = {
 		en = "Hide arms model"
@@ -92,6 +104,48 @@ return {
 	hide_weapon_description = {
 		en = "Hide weapon of your character."
 	},
+	-- walls_group = {
+	-- 	en = "Invisible/death walls settings"
+	-- },
+	-- walls_group_description = {
+	-- 	en = "Invisible/death walls settings: keybind, numbers, colors."
+	-- },
+	-- fyf_show_walls = {
+	-- 	en = "Show invisible/death walls"
+	-- },
+	-- fyf_show_walls_description = {
+	-- 	en = "Apply colorful patterns that indicates invisible/death walls."
+	-- },
+	-- walls_color_group = {
+	-- 	en = "Pattern color settings"
+	-- },
+	-- walls_color_group_description = {
+	-- 	en = "Pattern color settings: ARGB."
+	-- },
+	-- fyf_walls_color_alpha = {
+	-- 	en = "Alpha"
+	-- },
+	-- fyf_walls_color_alpha_description = {
+	-- 	en = "Alpha."
+	-- },
+	-- fyf_walls_color_red = {
+	-- 	en = "Red"
+	-- },
+	-- fyf_walls_color_red_description = {
+	-- 	en = "Red."
+	-- },
+	-- fyf_walls_color_green = {
+	-- 	en = "Green"
+	-- },
+	-- fyf_walls_color_green_description = {
+	-- 	en = "Green."
+	-- },
+	-- fyf_walls_color_blue = {
+	-- 	en = "Blue"
+	-- },
+	-- fyf_walls_color_blue_description = {
+	-- 	en = "Blue."
+	-- },
 	show_ui_widget = {
 		en = "Flight information"
 	},
