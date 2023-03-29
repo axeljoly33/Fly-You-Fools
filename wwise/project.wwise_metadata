@@ -1,0 +1,49 @@
+
+aux_buses = [
+]
+banks = {
+	FYF_soundbank = {
+		events = [
+			"FYF_event"
+		]
+	}
+	Init = {
+		events = [
+		]
+	}
+}
+buses = [
+	"Master Audio Bus"
+	"Motion Factory Bus"
+]
+events = {
+	FYF_event = {
+		attenuation_max = 0
+		duration_max = 2.710771
+		duration_min = 2.710771
+		duration_type = "OneShot"
+		positioning = "2D"
+	}
+}
+parameters = [
+	"Acoustic_Banner"
+	"Anechoic"
+	"Brick"
+	"Carpet"
+	"Concrete"
+	"Cork_Tiles"
+	"Curtains"
+	"Drywall"
+	"Fabric"
+	"Mountain"
+	"Tile"
+	"Wood"
+	"Wood_Bright"
+	"Wood_Deep"
+]
+state_groups = {
+}
+switch_groups = {
+}
+triggers = [
+]

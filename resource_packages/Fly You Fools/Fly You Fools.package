@@ -1,0 +1,15 @@
+mod = [
+	"Fly You Fools"
+]
+
+package = [
+	"resource_packages/Fly You Fools/Fly You Fools"
+]
+
+lua = [
+	"scripts/mods/Fly You Fools/*"
+]
+
+wwise_dep = [
+  "wwise/*"
+]
